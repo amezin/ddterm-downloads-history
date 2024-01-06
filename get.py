@@ -31,4 +31,7 @@ parser = Parser()
 with urllib.request.urlopen('https://extensions.gnome.org/extension/3780/ddterm/') as request:
     parser.feed(request.read().decode())
 
+if not parser.result:
+    raise ValueError('Download counter not found!')
+
 print(datetime.datetime.now(tz=datetime.timezone.utc), parser.result)

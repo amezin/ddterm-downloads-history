@@ -18,3 +18,5 @@ jobs:
           git add results.txt
 
       - uses: amezin/github-api-commit-action@main
+        with:
+          token: ${{ github.token }}

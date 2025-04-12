@@ -14,8 +14,8 @@ jobs:
       - uses: actions/checkout@main
 
       - run: |
-          python3 get.py >> results.txt
-          git add results.txt
+          python3 get.py >> results.csv
+          git add results.csv
 
       - uses: amezin/github-api-commit-action@main
         with:

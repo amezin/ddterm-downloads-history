@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 
+import csv
 import datetime
 import html.parser
+import re
+import sys
 import urllib.request
+
+
+INPUT_RE = re.compile(r'^\s*(\d+)\s+downloads\s*$')
 
 
 class Parser(html.parser.HTMLParser):
@@ -20,10 +26,18 @@ class Parser(html.parser.HTMLParser):
         self.in_tag = False
 
     def handle_data(self, data):
-        if self.in_tag:
-            if self.result:
-                raise ValueError(f'Multiple results found: {[self.result, data]!r}')
-            self.result = data
+        if not self.in_tag:
+            return
+
+        if self.result:
+            raise ValueError(f'Multiple results found: {[self.result, data]!r}')
+
+        match = INPUT_RE.fullmatch(data)
+
+        if not match:
+            raise ValueError(f'Pattern {INPUT_RE!r} not found in {data!r}')
+
+        self.result = int(match.group(1))
 
 
 parser = Parser()
@@ -34,4 +48,8 @@ with urllib.request.urlopen('https://extensions.gnome.org/extension/3780/ddterm/
 if not parser.result:
     raise ValueError('Download counter not found!')
 
-print(datetime.datetime.now(tz=datetime.timezone.utc), parser.result)
+writer = csv.writer(sys.stdout)
+writer.writerow((
+    datetime.datetime.now(tz=datetime.UTC).replace(tzinfo=None).isoformat(timespec='seconds'),
+    parser.result
+))

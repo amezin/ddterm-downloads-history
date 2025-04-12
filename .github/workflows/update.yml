@@ -1,0 +1,22 @@
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '36 * * * *'
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@main
+
+      - run: |
+          python3 get.py >> results.txt
+          git add results.txt
+
+      - uses: amezin/github-api-commit-action@main
+        with:
+          token: ${{ github.token }}

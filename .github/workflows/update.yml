@@ -1,0 +1,31 @@
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '36 * * * *'
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@main
+
+      - id: filename
+        run: |
+          echo "filename=$(date -u '+%Y-%m.csv')" >>"$GITHUB_OUTPUT"
+
+      - run: python3 get.py >>"$OUTPUT_FILE"
+        env:
+          OUTPUT_FILE: ${{ steps.filename.outputs.filename }}
+
+      - id: datetime
+        run: |
+          echo "datetime=$(date -u)" >>"$GITHUB_OUTPUT"
+
+      - uses: ./.github/actions/create-commit
+        with:
+          message: Automatic commit ${{ steps.datetime.outputs.datetime }}
+          files: ${{ steps.filename.outputs.filename }}

@@ -1,0 +1,84 @@
+# SPDX-FileCopyrightText: 2025 Aleksandr Mezin <mezin.alexander@gmail.com>
+#
+# SPDX-License-Identifier: CC0-1.0
+
+name: Create a commit
+description: Create a commit on the specified branch through GraphQL API
+inputs:
+  repository:
+    description: Repository name
+    default: ${{ github.event.repository.name }}
+    required: true
+  owner:
+    description: Repository owner
+    default: ${{ github.repository_owner }}
+    required: true
+  branch:
+    description: Branch name to create commit on
+    default: ${{ github.ref_name }}
+    required: true
+  expected-head:
+    description: Expected branch head
+    default: ${{ github.sha }}
+    required: true
+  message:
+    description: Commit message
+    required: true
+  files:
+    description: List of files to add to the commit, one file per line
+    required: true
+  github-token:
+    description: The GitHub token used to create an authenticated client
+    default: ${{ github.token }}
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/github-script@v7
+      env:
+        INPUT_REPOSITORY: ${{ inputs.repository }}
+        INPUT_OWNER: ${{ inputs.owner }}
+        INPUT_BRANCH: ${{ inputs.branch }}
+        INPUT_HEAD: ${{ inputs.expected-head }}
+        INPUT_MESSAGE: ${{ inputs.message }}
+        INPUT_FILES: ${{ inputs.files }}
+
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const { readFileSync } = await import('node:fs');
+
+          const repo = core.getInput('repository', { required: true });
+          const owner = core.getInput('owner', { required: true });
+          const branch = core.getInput('branch', { required: true });
+          const head = core.getInput('head', { required: true });
+          const message = core.getInput('message', { required: true });
+          const files = core.getMultilineInput('files', { required: true });
+
+          const additions = files.map(filepath => {
+            return {
+              path: filepath,
+              contents: readFileSync(filepath).toString('base64'),
+            };
+          })
+
+          const input = {
+            branch: {
+              repositoryNameWithOwner: `${owner}/${repo}`,
+              branchName: branch,
+            },
+            message: {
+              headline: message,
+            },
+            fileChanges: {
+              additions,
+            },
+            expectedHeadOid: head,
+          };
+
+          const query = `mutation ($input: CreateCommitOnBranchInput!) {
+            createCommitOnBranch(input: $input) { commit { url } }
+          }`;
+
+          return await github.graphql(query, { input });
